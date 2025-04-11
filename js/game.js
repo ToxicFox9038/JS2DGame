@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = 800;
 canvas.height = 600;
 
-// Ground class (unchanged)
+// Ground class updated to use the ground sprite
 class Ground {
     constructor() {
         this.x = 0;
@@ -13,12 +13,34 @@ class Ground {
         this.height = 20;
     }
 
-    draw(ctx) {
-         ctx.fillStyle = 'green';
-         ctx.fillRect(this.x, this.y, this.width, this.height);
+    draw(ctx, sprite) {
+        if (sprite.complete) {
+            ctx.drawImage(sprite, this.x, this.y, this.width, this.height);
+        } else {
+            console.warn('Ground sprite not loaded, using fallback.');
+            ctx.fillStyle = 'green';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
     }
 }
 
+// Object to store all sprite images
+const sprites = {
+    player: new Image(),
+    platform: new Image(),
+    ground: new Image(),
+    background: new Image()
+};
+
+// Debugging: Test if the ground sprite loads correctly
+sprites.ground.onload = () => {
+    console.log('Ground sprite loaded successfully.');
+};
+sprites.ground.onerror = () => {
+    console.error('Failed to load ground sprite:', sprites.ground.src);
+};
+
+// Update the ground instance to use the sprite in the game loop
 const ground = new Ground();
 
 // Create the player using the Player class from player.js
@@ -67,18 +89,10 @@ for (let i = 0; i < 5; i++) {
     generatePlatform();
 }
 
-// Object to store all sprite images
-const sprites = {
-    player: new Image(),
-    platform: new Image(),
-    ground: new Image(),
-    background: new Image()
-}
-
 // set the source image for each sprite
 sprites.player.src = '../assets/player.png';
-sprites.platform.src = '../assets/player.png';
-sprites.ground.src = '../assets/background.png';
+sprites.platform.src = '../assets/platform.png';
+sprites.ground.src = '../assets/ground.png';
 sprites.background.src = '../assets/background.png';
 
 // variable to track the number of images loaded
@@ -104,11 +118,14 @@ for(let key in sprites){
     );
 }
 
+// Game loop
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Draw the background
+    ctx.drawImage(sprites.background, 0, 0, canvas.width, canvas.height);
+
     platforms.forEach(p => p.x -= gameSpeed);
-    
     collectibles.forEach(c => c.x -= gameSpeed);
 
     platforms = platforms.filter(p => p.x + p.width > 0);
@@ -118,10 +135,13 @@ function gameLoop() {
         generatePlatform();
     }
 
-    ground.draw(ctx);
+    // Draw the ground using the ground sprite
+    ground.draw(ctx, sprites.ground);
 
-    ctx.fillStyle = 'brown';
-    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
+    // Draw platforms using the platform sprite
+    platforms.forEach(p => {
+        ctx.drawImage(sprites.platform, p.x, p.y, p.width, p.height);
+    });
 
     collectibles.forEach(c => {
         if (c.checkCollision(player)) {
@@ -132,11 +152,9 @@ function gameLoop() {
 
     // Update the player with the new update method
     player.update(canvas, platforms, keys);
-    player.draw(ctx,sprites);
+    player.draw(ctx, sprites);
 
     scoreDisplay.textContent = `Score: ${score}`;
 
     requestAnimationFrame(gameLoop);
 }
-
-// gameLoop();
